@@ -1,0 +1,26 @@
+# ⚠️ IMPORTANTE — Renomear o arquivo de logo
+
+O Next.js não consegue servir arquivos com espaço no nome pelo `public/`.
+
+**Você precisa renomear o arquivo:**
+
+```
+public/logos/RYVOLT LOGO.png   →   public/ryvolt-logo.png
+```
+
+## Como renomear:
+
+1. Vá até `outputs/public/logos/`
+2. Clique com botão direito no `RYVOLT LOGO.png`
+3. Renomeie para `ryvolt-logo.png` (sem espaço, tudo minúsculo)
+4. Pronto — não precisa reiniciar o servidor
+
+## O que vai usar `ryvolt-logo.png`:
+
+- **Favicon do site** (aba do navegador)
+- **BrandLogo** (canto do site)
+- **Empty state das DMs** (quando não tem conversa selecionada — mostrei na última edição)
+- **Apple touch icon** (iOS)
+- **OpenGraph image** (preview quando compartilhar o site)
+
+Se você quiser versões adicionais (ex: ícone pequeno pra sidebar), me avisa.

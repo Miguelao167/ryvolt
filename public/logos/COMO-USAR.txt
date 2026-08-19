@@ -1,0 +1,18 @@
+# Coloque a imagem RYVOLT LOGO aqui
+
+Salve sua logo nesta pasta com o nome:
+
+**`ryvolt-logo.png`** (ou `.svg` / `.jpg`)
+
+## Como usar depois:
+
+1. Acesse `http://localhost:3000/uploads` no app
+2. Ou arraste o arquivo direto pra esta pasta pelo explorador
+3. Me avise quando salvar e em que formato
+
+## Sugestões de nome:
+- `ryvolt-logo.png` (logo principal, fundo transparente ideal)
+- `ryvolt-logo-square.png` (ícone quadrado para favicon)
+- `ryvolt-wordmark.png` (apenas texto "RYVOLT")
+
+Quando terminar, é só me dizer: "logo salva em public/logos/ryvolt-logo.png" e eu plugo em todo o site.

@@ -1,0 +1,22 @@
+-- =============================================
+-- RYVOLT - Enable Realtime Broadcast
+-- =============================================
+-- Supabase Realtime Broadcast doesn't need a publication (it's
+-- ephemeral WebSocket-only). It just needs the `realtime` extension
+-- enabled, which it is by default on managed instances.
+--
+-- But the `broadcast` authorization check requires the `messages` table
+-- to be added to the `supabase_realtime` publication IF you want
+-- postgres_changes events. We don't — we use pure broadcast channels.
+--
+-- So: nothing to run. This file is a placeholder to remind you that
+-- realtime channels work out of the box, as long as the Supabase
+-- project's Realtime is enabled (Project Settings → API → Realtime).
+--
+-- To verify in the Supabase dashboard:
+--   1. Database → Replication → supabase_realtime publication
+--      (you should NOT need to add anything here for broadcast-only)
+--   2. The project itself: Project Settings → API → Realtime must be ON
+--
+-- If realtime is OFF at the project level, contact Supabase support
+-- or recreate the project (it cannot be toggled via SQL).
