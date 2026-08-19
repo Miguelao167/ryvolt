@@ -116,7 +116,7 @@ export function DirectMessageView({ threadId, currentUser, otherUser }: DirectMe
     const label = formatDayLabel(m.createdAt)
     const last = grouped[grouped.length - 1]
     if (last && last.day === label) last.items.push(m)
-    else grouped.push({ day: label, items: m })
+    else grouped.push({ day: label, items: [m] })
   }
 
   // Render the voice/video call interface when this DM is in a call
