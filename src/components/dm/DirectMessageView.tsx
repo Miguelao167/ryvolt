@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, Button, Markdown } from '@/components/ui'
-import { VoiceCallView } from '@/components/voice'
+import { VoiceCallView } from '@/components/voice/VoiceCallView'
 import { useVoiceStore } from '@/stores/voiceStore'
 import { useDMCall } from '@/hooks/useDMCall'
 import {
