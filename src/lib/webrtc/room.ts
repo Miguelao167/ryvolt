@@ -18,6 +18,13 @@ export interface RoomOptions {
   selfAvatar?: string | null
   /** Discoverable list of other user ids to mesh with (mesh topology) */
   knownPeerIds?: string[]
+  /**
+   * Optional: tie this room to a DM thread instead of a community channel.
+   * When set, the signaling uses dm:{dmThreadId} as the room key, so two
+   * users opening the same DM thread connect to each other regardless of
+   * being in the same community.
+   */
+  dmThreadId?: string
 }
 
 export type RoomEvent =
@@ -34,6 +41,9 @@ export class VoiceRoom {
   readonly channelId: string
   readonly communityId: string
   readonly selfId: string
+  /** Effective signaling room id. For community channels same as channelId;
+   * for DMs it's `dm:{threadId}` so two users in the same DM connect. */
+  readonly roomId: string
 
   private selfDisplayName: string
   private selfAvatar: string | null
@@ -50,6 +60,7 @@ export class VoiceRoom {
   constructor(opts: RoomOptions) {
     this.channelId = opts.channelId
     this.communityId = opts.communityId
+    this.roomId = opts.dmThreadId ? `dm:${opts.dmThreadId}` : opts.channelId
     this.selfId = opts.selfId
     this.selfDisplayName = opts.selfDisplayName
     this.selfAvatar = opts.selfAvatar ?? null
@@ -121,7 +132,7 @@ export class VoiceRoom {
       }
       // Broadcast speaking state to others (throttled)
       if (speaking) {
-        void getSignalingAdapter().send(this.channelId, {
+        void getSignalingAdapter().send(this.roomId, {
           type: 'speaking',
           from: this.selfId,
           payload: { level },
@@ -135,17 +146,17 @@ export class VoiceRoom {
     await signaling.connect(this.selfId)
 
     const offMsg = signaling.onMessage(async (env) => {
-      if (env.room !== this.channelId) return
+      if (env.room !== this.roomId) return
       const msg = env.msg
       if (msg.from === this.selfId) return // ignore self echoes
       await this.handleSignal(msg)
     })
     this.unsubscribers.push(offMsg)
 
-    await signaling.join(this.channelId)
+    await signaling.join(this.roomId)
 
     // Announce presence
-    await signaling.send(this.channelId, {
+    await signaling.send(this.roomId, {
       type: 'join',
       from: this.selfId,
       payload: {
@@ -184,11 +195,11 @@ export class VoiceRoom {
     this.unsubscribers = []
     for (const peer of Array.from(this.peers.values())) peer.close()
     this.peers.clear()
-    void getSignalingAdapter().send(this.channelId, {
+    void getSignalingAdapter().send(this.roomId, {
       type: 'leave',
       from: this.selfId,
     })
-    void getSignalingAdapter().leave(this.channelId)
+    void getSignalingAdapter().leave(this.roomId)
     getMediaManager().release()
     this.localStream = null
     this.participants.clear()
@@ -209,7 +220,7 @@ export class VoiceRoom {
       this.emit({ kind: 'participant-updated', participant: self })
     }
     // Tell peers
-    void getSignalingAdapter().send(this.channelId, {
+    void getSignalingAdapter().send(this.roomId, {
       type: 'mute-state',
       from: this.selfId,
       payload: { muted },
@@ -370,7 +381,7 @@ export class VoiceRoom {
     const peer = new PeerConnection({
       selfId: this.selfId,
       remoteId,
-      roomId: this.channelId,
+      roomId: this.roomId,
       localStream: this.localStream,
       polite,
       onTrack: (stream) => {
@@ -392,7 +403,7 @@ export class VoiceRoom {
           peer['pc']?.createOffer({ iceRestart: true }).then((offer) => {
             return peer['pc']?.setLocalDescription(offer)
           }).then(() => {
-            void getSignalingAdapter().send(this.channelId, {
+            void getSignalingAdapter().send(this.roomId, {
               type: 'offer',
               from: this.selfId,
               to: remoteId,

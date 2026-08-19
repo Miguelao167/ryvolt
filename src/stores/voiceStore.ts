@@ -7,8 +7,13 @@ import { VoiceRoom as VoiceRoomClass } from '@/lib/webrtc/room'
 type VoiceRoom = VoiceRoomClass
 
 interface VoiceState {
-  /** Channel id of the active voice room */
+  /** Channel id of the active voice room. For community channels this is the
+   * channel id; for DMs it's `dm:{threadId}`. */
   activeChannelId: string | null
+  /** When the active call is a DM, this holds the thread id. Null for community channels. */
+  activeDMThreadId: string | null
+  /** Display name of the active room (channel name or friend display name). */
+  activeRoomName: string | null
   /** Whether video is enabled in the active room */
   videoEnabled: boolean
   /** Participants in the current room (excluding self as separate entry) */
@@ -33,6 +38,10 @@ interface VoiceState {
     selfDisplayName: string
     selfAvatar?: string | null
     withVideo?: boolean
+    /** When set, joins a DM call instead of a community channel. */
+    dmThreadId?: string
+    /** Display name for the active room. */
+    roomName?: string
   }) => Promise<void>
   leave: () => void
   setMuted: (muted: boolean) => void
@@ -47,6 +56,8 @@ interface VoiceState {
 
 export const useVoiceStore = create<VoiceState>((set, get) => ({
   activeChannelId: null,
+  activeDMThreadId: null,
+  activeRoomName: null,
   videoEnabled: false,
   participants: new Map(),
   connectionState: 'idle',
@@ -63,6 +74,8 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
     selfDisplayName,
     selfAvatar,
     withVideo = false,
+    dmThreadId,
+    roomName,
   }) => {
     // Clean up any prior room
     get().leave()
@@ -73,6 +86,7 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
       selfId,
       selfDisplayName,
       selfAvatar: selfAvatar ?? null,
+      dmThreadId,
     })
 
     room.on((ev: { kind: string; [k: string]: any }) => {
@@ -98,6 +112,8 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
     set({
       _room: room,
       activeChannelId: channelId,
+      activeDMThreadId: dmThreadId ?? null,
+      activeRoomName: roomName ?? null,
       videoEnabled: withVideo,
       participants: new Map(),
       connectionState: 'connecting',
@@ -119,6 +135,8 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
     room?.leave()
     set({
       activeChannelId: null,
+      activeDMThreadId: null,
+      activeRoomName: null,
       videoEnabled: false,
       participants: new Map(),
       connectionState: 'idle',

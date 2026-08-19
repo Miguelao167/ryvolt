@@ -11,15 +11,22 @@ import {
   Smile,
   Gift,
   Sticker,
-  Hash,
   Mic,
   Settings,
   UserX,
   Pin,
   X as XIcon,
+  PhoneOff,
+  VideoOff,
+  PhoneIncoming,
+  PhoneMissed,
+  PhoneOutgoing,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, Button, Markdown } from '@/components/ui'
+import { VoiceCallView } from '@/components/voice'
+import { useVoiceStore } from '@/stores/voiceStore'
+import { useDMCall } from '@/hooks/useDMCall'
 import {
   fetchDMMessages,
   sendDM,
@@ -54,7 +61,15 @@ export function DirectMessageView({ threadId, currentUser, otherUser }: DirectMe
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showProfile, setShowProfile] = useState(true)
+  const [showSearch, setShowSearch] = useState(false)
+  const [showPinned, setShowPinned] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const { startCall, endCall } = useDMCall()
+  const activeDMThreadId = useVoiceStore((s) => s.activeDMThreadId)
+  const connectionState = useVoiceStore((s) => s.connectionState)
+  const isInThisCall = activeDMThreadId === threadId
 
   useEffect(() => {
     let cancelled = false
@@ -101,7 +116,18 @@ export function DirectMessageView({ threadId, currentUser, otherUser }: DirectMe
     const label = formatDayLabel(m.createdAt)
     const last = grouped[grouped.length - 1]
     if (last && last.day === label) last.items.push(m)
-    else grouped.push({ day: label, items: [m] })
+    else grouped.push({ day: label, items: m })
+  }
+
+  // Render the voice/video call interface when this DM is in a call
+  if (isInThisCall) {
+    return (
+      <VoiceCallView
+        dmThreadId={threadId}
+        callName={headerName}
+        showVideo={false}
+      />
+    )
   }
 
   return (
@@ -129,25 +155,44 @@ export function DirectMessageView({ threadId, currentUser, otherUser }: DirectMe
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <button
+              onClick={async () => {
+                if (!otherUser) return
+                await startCall({ threadId, otherUser, withVideo: false })
+              }}
               className="p-2 rounded hover:bg-discord-hover text-discord-text-dim hover:text-white"
               title="Iniciar chamada de voz"
             >
               <Phone className="w-4 h-4" />
             </button>
             <button
+              onClick={async () => {
+                if (!otherUser) return
+                await startCall({ threadId, otherUser, withVideo: true })
+              }}
               className="p-2 rounded hover:bg-discord-hover text-discord-text-dim hover:text-white"
               title="Iniciar chamada de vídeo"
             >
               <Video className="w-4 h-4" />
             </button>
             <button
-              className="p-2 rounded hover:bg-discord-hover text-discord-text-dim hover:text-white"
-              title="Fixar conversa"
+              onClick={() => setShowPinned((s) => !s)}
+              className={cn(
+                'p-2 rounded hover:bg-discord-hover text-discord-text-dim hover:text-white',
+                showPinned && 'text-white bg-discord-hover'
+              )}
+              title="Mensagens fixadas"
             >
               <Pin className="w-4 h-4" />
             </button>
             <button
-              className="p-2 rounded hover:bg-discord-hover text-discord-text-dim hover:text-white"
+              onClick={() => {
+                setShowSearch((s) => !s)
+                if (!showSearch) setTimeout(() => searchRef.current?.focus(), 50)
+              }}
+              className={cn(
+                'p-2 rounded hover:bg-discord-hover text-discord-text-dim hover:text-white',
+                showSearch && 'text-white bg-discord-hover'
+              )}
               title="Buscar"
             >
               <Search className="w-4 h-4" />
@@ -165,12 +210,42 @@ export function DirectMessageView({ threadId, currentUser, otherUser }: DirectMe
           </div>
         </header>
 
+        {/* Search bar (toggles) */}
+        {showSearch && (
+          <div className="px-4 py-2 border-b border-discord-deep bg-discord-bg">
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-discord-text-dim shrink-0" />
+              <input
+                ref={searchRef}
+                type="text"
+                placeholder="Buscar"
+                className="flex-1 bg-transparent text-sm text-white placeholder:text-discord-text-dim outline-none"
+              />
+              <button
+                onClick={() => setShowSearch(false)}
+                className="p-1 rounded hover:bg-discord-hover text-discord-text-dim"
+                title="Fechar"
+              >
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Pinned messages banner */}
+        {showPinned && (
+          <div className="px-4 py-2 border-b border-discord-deep bg-discord-bg">
+            <div className="text-xs text-discord-text-dim">
+              Nenhuma mensagem fixada ainda.
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="text-center text-sm text-discord-text-dim py-8">Carregando...</div>
           ) : isEmpty ? (
-            /* Discord-style empty state */
             <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
               <Avatar
                 src={otherUser?.avatarUrl}
@@ -194,8 +269,15 @@ export function DirectMessageView({ threadId, currentUser, otherUser }: DirectMe
                   Online agora
                 </span>
               </div>
-              <Button className="mt-6">
-                👋 Acenar para {headerName}
+              <Button
+                className="mt-6"
+                onClick={async () => {
+                  if (!otherUser) return
+                  await startCall({ threadId, otherUser, withVideo: false })
+                }}
+              >
+                <Phone className="w-4 h-4 mr-2" />
+                Ligar para {headerName}
               </Button>
             </div>
           ) : (
@@ -314,9 +396,7 @@ export function DirectMessageView({ threadId, currentUser, otherUser }: DirectMe
       {/* Right rail — Perfil do amigo (estilo Discord) */}
       {showProfile && otherUser && (
         <aside className="w-72 shrink-0 border-l border-discord-deep bg-discord-surface hidden lg:flex flex-col overflow-y-auto">
-          {/* Banner */}
           <div className="h-20 bg-gradient-to-br from-violet-500/40 to-cyan-500/40 shrink-0" />
-          {/* Avatar grande centralizado */}
           <div className="px-4 -mt-10 shrink-0">
             <div className="w-20 h-20 rounded-full border-[6px] border-discord-surface overflow-hidden bg-discord-surface">
               <Avatar
@@ -338,6 +418,30 @@ export function DirectMessageView({ threadId, currentUser, otherUser }: DirectMe
               <span>•</span>
               <span>🏠 0 servidores mútuos</span>
             </div>
+          </div>
+
+          {/* Quick call buttons (Discord style) */}
+          <div className="px-4 pt-5 grid grid-cols-2 gap-2">
+            <button
+              onClick={async () => {
+                if (!otherUser) return
+                await startCall({ threadId, otherUser, withVideo: false })
+              }}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-discord-hover hover:bg-discord-surface2 text-white text-sm font-medium transition-colors"
+            >
+              <Phone className="w-4 h-4" />
+              Ligar
+            </button>
+            <button
+              onClick={async () => {
+                if (!otherUser) return
+                await startCall({ threadId, otherUser, withVideo: true })
+              }}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-discord-hover hover:bg-discord-surface2 text-white text-sm font-medium transition-colors"
+            >
+              <Video className="w-4 h-4" />
+              Vídeo
+            </button>
           </div>
 
           <div className="border-t border-discord-deep mt-5 pt-4 px-4">
