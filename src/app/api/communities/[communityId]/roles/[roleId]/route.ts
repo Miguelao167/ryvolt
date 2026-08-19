@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { PERMISSION_BITS } from '@/lib/permissions'
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 
 export async function PATCH(
   request: Request,

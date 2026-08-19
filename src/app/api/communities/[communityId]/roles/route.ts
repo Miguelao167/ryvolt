@@ -2,6 +2,9 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { PERMISSION_BITS } from '@/lib/permissions'
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 
 const roleSchema = z.object({
   name: z.string().min(1).max(50),

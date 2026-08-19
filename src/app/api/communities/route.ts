@@ -1,6 +1,9 @@
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 
 const communitySchema = z.object({
   name: z.string().min(2).max(100),
