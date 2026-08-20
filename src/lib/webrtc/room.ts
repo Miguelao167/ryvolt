@@ -415,6 +415,25 @@ export class VoiceRoom {
     })
 
     this.peers.set(remoteId, peer)
+
+    // Kick off the offer immediately. Perfect-negotiation relies on
+    // `onnegotiationneeded` firing once we add tracks, but that callback
+    // can race with the remote peer also sending an offer, leaving both
+    // sides stuck. Spinning up the offer here (when we're polite OR when
+    // we created the peer before the remote did) avoids the deadlock.
+    try {
+      const offer = await peer['pc'].createOffer()
+      await peer['pc'].setLocalDescription(offer)
+      await getSignalingAdapter().send(this.roomId, {
+        type: 'offer',
+        from: this.selfId,
+        to: remoteId,
+        payload: peer['pc'].localDescription,
+      })
+    } catch (err) {
+      console.warn('[VoiceRoom] initial offer failed', err)
+    }
+
     return peer
   }
 }

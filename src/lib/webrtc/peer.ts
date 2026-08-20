@@ -67,6 +67,10 @@ export class PeerConnection {
 
     this.pc.onnegotiationneeded = async () => {
       try {
+        // If we already kicked off the offer manually (VoiceRoom.openPeerConnection),
+        // don't immediately try to send another one — wait until the connection
+        // is in a stable state again.
+        if (this.pc.signalingState !== 'stable') return
         this.makingOffer = true
         await this.pc.setLocalDescription()
         await this.send({
